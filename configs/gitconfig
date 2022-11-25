@@ -1,0 +1,10 @@
+[init]
+	defaultBranch = main
+[user]
+	name = Jonathan Vasquez
+	email = jon@xyinn.org
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status

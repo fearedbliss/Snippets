@@ -1,0 +1,5 @@
+#exec xfce4-session
+
+# Enables Trash Support in Thunar (GVFS)
+export $(dbus-launch)
+exec i3

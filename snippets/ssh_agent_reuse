@@ -1,0 +1,52 @@
+# Allows you to automatically and cleanly create an ssh-agent session
+# and reuse the same session for the same user across all of your terminals,
+# even if you log out and log back in (it won't persist across reboots since
+# I've explicitly kept the session files in /tmp). This was designed to be used
+# on FreeBSD's /bin/sh and specifically made to be used with interactive shells.
+
+# Place the following piece of code in your ~/.shrc:
+
+SSH_AGENT_DIR_PREFIX="/tmp/ssh-*"
+SSH_AGENT_FILE="${HOME}/.last_ssh_agent"
+
+cleanly_start_agent() {
+	# Kill any other ssh-agents so we can start fresh.
+	killall -q ssh-agent
+
+	# Remove any left over ssh-agent dirs.
+	rm -rf ${SSH_AGENT_DIR_PREFIX}
+
+	# Start the ssh-agent session and save the session.
+	# (faster than sleeping/parsing ps -aux due to race conditions)
+	ssh-agent > ${SSH_AGENT_FILE}
+
+	eval `cat ${SSH_AGENT_FILE}` > /dev/null
+}
+
+if [ -e ${SSH_AGENT_FILE} ]; then
+    # Sources the previously backed up session information.
+	eval `cat ${SSH_AGENT_FILE}` > /dev/null
+
+    # Validates that the imported session information
+    # is still valid. If it isn't, a new one will start.
+	pgrep ssh-agent | grep ${SSH_AGENT_PID} > /dev/null
+
+	if [ $? -eq 0 ]; then
+		if [ ! -e ${SSH_AUTH_SOCK} ]; then
+			cleanly_start_agent
+		fi
+	else 
+		cleanly_start_agent
+	fi
+else
+    # Starts a new agent session.
+	cleanly_start_agent
+fi
+
+unset_ssh_agent() {
+	# Unset the agent so it doesn't get destroyed when the shell closes.
+	unset SSH_AUTH_SOCK
+	unset SSH_AGENT_PID
+}
+
+trap unset_ssh_agent EXIT
